@@ -22,17 +22,6 @@ extern "C" {
 #define NDSTORE_ERR_UNKNOWN_OBJ    -8 /* Could not find the object*/
 #define NDSTORE_ERR_END         -9 /* End of range for valid error codes */
 
-const char* const ndstore_error_messages[] = {
-    "",
-    "Allocation error",
-    "Invalid argument",
-    "Mercury error",
-    "Error writing in the server",
-    "Provided buffer size too small",
-    "Error finding the server",
-	"Could not locate the object",
-    "Argobots error"
-};
 
 #if defined(__cplusplus)
 }
