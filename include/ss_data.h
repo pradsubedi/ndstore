@@ -95,7 +95,7 @@ void ls_add_obj(ss_storage *, struct obj_data *);
 struct obj_data* ls_lookup(ss_storage *, char *);
 void ls_remove(ss_storage *, struct obj_data *);
 void ls_try_remove_free(ss_storage *, struct obj_data *);
-struct obj_data * ls_find(ss_storage *, obj_descriptor *);
+int ls_find_ods(ss_storage *, obj_descriptor *, struct obj_data **);
 struct obj_data * ls_find_no_version(ss_storage *, obj_descriptor *);
 
 struct obj_data *obj_data_alloc(obj_descriptor *);

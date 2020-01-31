@@ -223,23 +223,30 @@ static void ndstore_get_ult(hg_handle_t handle)
 
 
     struct obj_data *od, *from_obj;
+    struct obj_data **od_tab;
+    od_tab = malloc(sizeof(*od_tab) * provider->ls->num_obj);
 
-    from_obj = ls_find(provider->ls, &(in.odsc));
-    if (!from_obj) {
+    int obj_nums = 0;
+    obj_nums = ls_find_ods(provider->ls, &(in.odsc), od_tab);
+
+    if (obj_nums == 0) {
         char *str;
         str = obj_desc_sprint(&(in.odsc));
-        fprintf(stderr, "Error (ndstore_put_ult): %s object not found in the provider\n", str);
+        fprintf(stderr, "Error (ndstore_put_ult): No objects for %s found in the provider\n", str);
         free(str);
         out.ret = NDSTORE_ERR_UNKNOWN_OBJ;
-		margo_respond(handle, &out);
-		margo_destroy(handle);
-		return;
+        margo_respond(handle, &out);
+        margo_destroy(handle);
+        return;
     }
 
-
-
     od = obj_data_alloc(&(in.odsc));
-    ssd_copy(od, from_obj);
+    int i;
+    for(i=0; i<obj_nums; i++){
+        ssd_copy(od, od_tab[i]);
+    }
+    free(od_tab);
+    
     hg_size_t size = (in.odsc.size)*bbox_volume(&(in.odsc.bb));
     void *buffer = (void*) od->data;
     hret = margo_bulk_create(mid, 1, (void**)&buffer, &size,

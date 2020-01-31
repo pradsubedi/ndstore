@@ -130,7 +130,7 @@ int ndstore_put (ndstore_provider_handle_t provider,
 		const char *var_name,
         unsigned int ver, int size,
         int ndim, uint64_t *lb, uint64_t *ub, 
-        const void *data); 
+        void *data); 
 
 /**
  * @brief Query the space to get data specified by a geometric
@@ -167,7 +167,7 @@ int ndstore_get (ndstore_provider_handle_t provider,
 		const char *var_name,
         unsigned int ver, int size,
         int ndim, uint64_t *lb, uint64_t *ub, 
-        const void *data); 
+        void *data); 
 
 #if defined(__cplusplus)
 }

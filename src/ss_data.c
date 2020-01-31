@@ -27,8 +27,8 @@
 /*
 *  Ciprian Docan (2009)  TASSL Rutgers University
 *  docan@cac.rutgers.edu
-*   Pradeep Subedi (2020) Rutgers University
-*   pradeep.subedi@rutgers.edu
+*  Pradeep Subedi (2020) Rutgers University
+*  pradeep.subedi@rutgers.edu
 */
 
 #include <stdio.h>
@@ -187,7 +187,6 @@ dim1:               numelem = (a->mat_view.ub[0] - a->mat_view.lb[0]) + 1;
     //uloga("Finished matrix copy \n");
 }
 
-
 /*
 */
 int ssd_copy(struct obj_data *to_obj, struct obj_data *from_obj)
@@ -323,24 +322,24 @@ void ls_try_remove_free(ss_storage *ls, struct obj_data *od)
 }
 
 /*
-  Find  an object  in the  local storage  that has  the same  name and
+  Find  list of object_desriptors  in the  local storage  that has  the same  name and
   version with the object descriptor 'odsc'.
 */
-struct obj_data *ls_find(ss_storage *ls, obj_descriptor *odsc)
+int ls_find_ods(ss_storage *ls, obj_descriptor *odsc, struct obj_data **od_tab)
 {
         struct obj_data *od;
         struct list_head *list;
         int index;
+        int num_odsc = 0;
 
         index = odsc->version % ls->size_hash;
         list = &ls->obj_hash[index];
-
         list_for_each_entry(od, list, struct obj_data, obj_entry) {
-                if (obj_desc_equals_intersect(odsc, &od->obj_desc))
-                        return od;
+            if (obj_desc_equals_intersect(odsc, &od->obj_desc)){
+                od_tab[num_odsc++] = od;
+            }
         }
-
-        return NULL;
+        return num_odsc;
 }
 
 /*

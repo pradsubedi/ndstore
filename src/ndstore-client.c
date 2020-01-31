@@ -141,7 +141,7 @@ int ndstore_put (ndstore_provider_handle_t provider,
 		const char *var_name,
         unsigned int ver, int elem_size,
         int ndim, uint64_t *lb, uint64_t *ub, 
-        const void *data)
+        void *data)
 {
 	hg_return_t hret;
     int ret = NDSTORE_SUCCESS;
@@ -220,7 +220,7 @@ int ndstore_get (ndstore_provider_handle_t provider,
 		const char *var_name,
         unsigned int ver, int elem_size,
         int ndim, uint64_t *lb, uint64_t *ub,
-        const void *data)
+        void *data)
 {
 	hg_return_t hret;
     int ret = NDSTORE_SUCCESS;
