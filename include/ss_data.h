@@ -11,10 +11,12 @@
 
 #include "bbox.h"
 #include "list.h"
-#include <sys/mman.h>
-#include <fcntl.h>
-#include <sys/stat.h>
+//#include <sys/mman.h>
+//#include <fcntl.h>
+//#include <sys/stat.h>
 #include <mercury.h>
+#include <mercury_bulk.h>
+#include <mercury_atomic.h>
 #include <mercury_macros.h>
 
 #define BBOX_MAX_NDIM 10
@@ -43,13 +45,10 @@ typedef struct{
 } obj_descriptor;
 
 
-
 struct obj_data {
         struct list_head        obj_entry;
 
         obj_descriptor   obj_desc;
-
-        void			*_data;		/* Unaligned pointer */
         void                    *data;		/* Aligned pointer */
 
         /* Reference to the parent object; used only for sub-objects. */
@@ -74,19 +73,47 @@ struct obj_desc_list {
 	obj_descriptor	odsc;
 };
 
+typedef struct{
+        size_t size;
+        char *raw_odsc;
+
+} odsc_hdr;
+
+static inline hg_return_t hg_proc_odsc_hdr(hg_proc_t proc, void *arg)
+{
+  hg_return_t ret;
+  odsc_hdr *in = (odsc_hdr*)arg;
+  ret = hg_proc_hg_size_t(proc, &in->size);
+  if(ret != HG_SUCCESS) return ret;
+  if (in->size) {
+    switch (hg_proc_get_op(proc)) {
+    case HG_ENCODE:
+        ret = hg_proc_raw(proc, in->raw_odsc, in->size);
+        if(ret != HG_SUCCESS) return ret;
+      break;
+    case HG_DECODE:
+      in->raw_odsc = (char*)malloc(in->size);
+      ret = hg_proc_raw(proc, in->raw_odsc, in->size);
+      if(ret != HG_SUCCESS) return ret;
+      break;
+    case HG_FREE:
+      free(in->raw_odsc);
+      break;
+    default:
+      break;
+    }
+  }
+  return HG_SUCCESS;
+}
 
 
-MERCURY_GEN_PROC(bulk_put_in_t,
-        ((obj_descriptor)(odsc))\
-        ((hg_size_t)(size))\
+
+MERCURY_GEN_PROC(bulk_in_t,
+        ((odsc_hdr)(odsc))\
         ((hg_bulk_t)(handle)))
-MERCURY_GEN_PROC(bulk_put_out_t, ((int32_t)(ret)))
+MERCURY_GEN_PROC(bulk_out_t, ((int32_t)(ret)))
 
-MERCURY_GEN_PROC(bulk_get_in_t,
-        ((obj_descriptor)(odsc))\
-        ((hg_bulk_t)(handle)))
-MERCURY_GEN_PROC(bulk_get_out_t, ((hg_size_t)(size)) ((int32_t)(ret)))
-
+char * obj_desc_sprint(obj_descriptor *);
 int ssd_copy(struct obj_data *, struct obj_data *);
 
 ss_storage *ls_alloc(int max_versions);

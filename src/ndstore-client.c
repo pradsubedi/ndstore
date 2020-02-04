@@ -17,7 +17,6 @@ struct ndstore_provider_handle {
     uint64_t       refcount;
 };
 
-
 static int ndstore_client_register(ndstore_client_t client, margo_instance_id mid)
 {
     client->mid = mid;
@@ -34,9 +33,9 @@ static int ndstore_client_register(ndstore_client_t client, margo_instance_id mi
     } else {
 
         client->ndstore_put_id =
-            MARGO_REGISTER(mid, "ndstore_put_rpc", bulk_put_in_t, bulk_put_out_t, NULL);
+            MARGO_REGISTER(mid, "ndstore_put_rpc", bulk_in_t, bulk_out_t, NULL);
         client->ndstore_get_id =
-            MARGO_REGISTER(mid, "ndstore_get_rpc", bulk_get_in_t, bulk_get_out_t, NULL);
+            MARGO_REGISTER(mid, "ndstore_get_rpc", bulk_in_t, bulk_out_t, NULL);
     }
 
     return NDSTORE_SUCCESS;
@@ -61,7 +60,7 @@ int ndstore_client_finalize(ndstore_client_t client)
 {
     if(client->num_provider_handles != 0) {
         fprintf(stderr,
-                "[NDSTORE] Warning: %d provider handles not released before ndstore_client_finalize was called\n",
+                "[NDSTORE] Warning: %" PRIu64 " provider handles not released before ndstore_client_finalize was called\n",
                 client->num_provider_handles);
     }
     free(client);
@@ -147,8 +146,6 @@ int ndstore_put (ndstore_provider_handle_t provider,
     int ret = NDSTORE_SUCCESS;
     hg_handle_t handle;
 
-    /*****/
-
     obj_descriptor odsc = {
             .version = ver, .owner = -1, 
             .st = st,
@@ -165,20 +162,20 @@ int ndstore_put (ndstore_provider_handle_t provider,
     strncpy(odsc.name, var_name, sizeof(odsc.name)-1);
     odsc.name[sizeof(odsc.name)-1] = '\0';
 
+    bulk_in_t in;
+    bulk_out_t out;
 
-    bulk_put_in_t in;
-    bulk_put_out_t out;
+    in.odsc.size = sizeof(odsc);
+    in.odsc.raw_odsc = (char*)(&odsc);
+     hg_size_t rdma_size = (elem_size)*bbox_volume(&odsc.bb);
 
-    in.odsc = odsc;
-    in.size = (odsc.size)*bbox_volume(&(odsc.bb));
-
-    hret = margo_bulk_create(provider->client->mid, 1, (void**)(&data), &in.size,
+    hret = margo_bulk_create(provider->client->mid, 1, (void**)&data, &rdma_size,
                             HG_BULK_READ_ONLY, &in.handle);
     if(hret != HG_SUCCESS) {
         fprintf(stderr,"[NDSTORE] margo_bulk_create() failed in ndstore_put()\n");
         return NDSTORE_ERR_MERCURY;
     }
-
+    
     /* create handle */
     hret = margo_create(
             provider->client->mid,
@@ -193,7 +190,7 @@ int ndstore_put (ndstore_provider_handle_t provider,
 
     hret = margo_provider_forward(provider->provider_id, handle, &in);
     if(hret != HG_SUCCESS) {
-        fprintf(stderr,"[NDSTORE] margo_forward() failed in ndstore_put()\n");
+        fprintf(stderr,"[NDSTORE] margo_forward() failed in ndstore_put() \n");
         margo_bulk_free(in.handle);
         margo_destroy(handle);
         return NDSTORE_ERR_MERCURY;
@@ -217,19 +214,17 @@ int ndstore_put (ndstore_provider_handle_t provider,
 }
 
 int ndstore_get (ndstore_provider_handle_t provider,
-		const char *var_name,
+        const char *var_name,
         unsigned int ver, int elem_size,
-        int ndim, uint64_t *lb, uint64_t *ub,
+        int ndim, uint64_t *lb, uint64_t *ub, 
         void *data)
 {
-	hg_return_t hret;
+    hg_return_t hret;
     int ret = NDSTORE_SUCCESS;
     hg_handle_t handle;
 
-    /*****/
-
     obj_descriptor odsc = {
-            .version = ver, .owner = -1,
+            .version = ver, .owner = -1, 
             .st = st,
             .size = elem_size,
             .bb = {.num_dims = ndim,}
@@ -244,14 +239,15 @@ int ndstore_get (ndstore_provider_handle_t provider,
     strncpy(odsc.name, var_name, sizeof(odsc.name)-1);
     odsc.name[sizeof(odsc.name)-1] = '\0';
 
+    bulk_in_t in;
+    bulk_out_t out;
 
-    bulk_get_in_t in;
-    bulk_get_out_t out;
+    in.odsc.size = sizeof(odsc);
+    in.odsc.raw_odsc = (char*)(&odsc);
 
-    in.odsc = odsc;
-    hg_size_t size = (odsc.size)*bbox_volume(&(odsc.bb));
+    hg_size_t rdma_size = (elem_size)*bbox_volume(&odsc.bb);
 
-    hret = margo_bulk_create(provider->client->mid, 1, (void**)(&data), &size,
+    hret = margo_bulk_create(provider->client->mid, 1, (void**)(&data), &rdma_size,
                             HG_BULK_WRITE_ONLY, &in.handle);
     if(hret != HG_SUCCESS) {
         fprintf(stderr,"[NDSTORE] margo_bulk_create() failed in ndstore_put()\n");
@@ -262,7 +258,7 @@ int ndstore_get (ndstore_provider_handle_t provider,
     hret = margo_create(
             provider->client->mid,
             provider->addr,
-            provider->client->ndstore_put_id,
+            provider->client->ndstore_get_id,
             &handle);
     if(hret != HG_SUCCESS) {
         fprintf(stderr,"[NDSTORE] margo_create() failed in ndstore_put()\n");
@@ -291,6 +287,6 @@ int ndstore_get (ndstore_provider_handle_t provider,
     margo_bulk_free(in.handle);
 
     margo_destroy(handle);
-	return ret;
+    return ret;
 
 }

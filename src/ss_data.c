@@ -27,13 +27,11 @@
 /*
 *  Ciprian Docan (2009)  TASSL Rutgers University
 *  docan@cac.rutgers.edu
+*
 *  Pradeep Subedi (2020) Rutgers University
 *  pradeep.subedi@rutgers.edu
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <math.h>
 #include <errno.h>
 #include "ss_data.h"
@@ -184,9 +182,22 @@ dim1:               numelem = (a->mat_view.ub[0] - a->mat_view.lb[0]) + 1;
     }
     if(a->num_dims == 9)    return;
     }
-    //uloga("Finished matrix copy \n");
 }
 
+char *obj_desc_sprint(obj_descriptor *odsc)
+{
+    char *str;
+    int nb;
+
+    str = alloc_sprintf("obj_descriptor = {\n"
+                "\t.name = %s,\n"
+                "\t.owner = %d,\n"
+                "\t.version = %d\n"
+                "\t.bb = ", odsc->name, odsc->owner, odsc->version);
+    str = str_append_const(str_append(str, bbox_sprint(&odsc->bb)), "}\n");
+
+    return str;
+}
 /*
 */
 int ssd_copy(struct obj_data *to_obj, struct obj_data *from_obj)
@@ -380,15 +391,19 @@ struct obj_data *obj_data_alloc(obj_descriptor *odsc)
     struct obj_data *od = 0;
 
 	od = malloc(sizeof(*od));
-	if (!od)
+	if (!od){
+        fprintf(stderr, "Malloc od error\n");
 		return NULL;
+    }
 	memset(od, 0, sizeof(*od));
 
-	od->_data = od->data = malloc(obj_data_size(odsc) + 7);
-	if (!od->_data) {
-		free(od);
-		return NULL;
-	}
+    int size= obj_data_size(odsc);
+    od->data= malloc(size);
+    if (!od->data) {
+        fprintf(stderr, "Malloc od_data error\n");
+        free(od);
+        return NULL;
+    }
 	ALIGN_ADDR_QUAD_BYTES(od->data);
 	od->obj_desc = *odsc;
 
@@ -413,13 +428,12 @@ struct obj_data *obj_data_alloc_with_data(obj_descriptor *odsc, const void *data
 
 void obj_data_free(struct obj_data *od)
 {
-    if (od->_data){
-		free(od->_data);
+    if(od){
+        if(od->data){
+        	free(od->data);
+        }
+    	free(od);
     }
-    if(od->data){
-    	free(od->data);
-    }
-	free(od);
 }
 
 

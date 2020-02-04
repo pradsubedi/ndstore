@@ -55,13 +55,13 @@ int ndstore_provider_register(
     server->mid = mid;
     hg_id_t rpc_id;
     rpc_id = MARGO_REGISTER_PROVIDER(mid, "ndstore_put_rpc",
-            bulk_put_in_t, bulk_put_out_t,
+            bulk_in_t, bulk_out_t,
             ndstore_put_ult, provider_id, pool);
     margo_register_data(mid, rpc_id, (void*)server, NULL);
     server->ndstore_put_id = rpc_id;
 
     rpc_id = MARGO_REGISTER_PROVIDER(mid, "ndstore_get_rpc",
-            bulk_get_in_t, bulk_get_out_t,
+            bulk_in_t, bulk_out_t,
             ndstore_get_ult, provider_id, pool);
     margo_register_data(mid, rpc_id, (void*)server, NULL);
     server->ndstore_get_id = rpc_id;
@@ -83,7 +83,6 @@ int ndstore_provider_register(
 static void ndstore_finalize_provider(void* p)
 {
     ndstore_provider_t provider = (ndstore_provider_t)p;
-    assert(provider);
     margo_instance_id mid = provider->mid;
 
     margo_deregister(mid, provider->ndstore_put_id);
@@ -104,30 +103,16 @@ int ndstore_provider_destroy(
     return NDSTORE_SUCCESS;
 }
 
-static char * obj_desc_sprint(obj_descriptor *odsc)
-{
-    char *str;
-    int nb;
 
-        nb = asprintf(&str, "obj_descriptor = {\n"
-                "\t.name = %s,\n"
-                "\t.owner = %d,\n"
-                "\t.version = %d\n"
-                "\t.bb = ", odsc->name, odsc->owner, odsc->version);
-    str = str_append_const(str_append(str, bbox_sprint(&odsc->bb)), "}\n");
-
-    return str;
-}
 
 static void ndstore_put_ult(hg_handle_t handle)
 {
     hg_return_t hret;
-    bulk_put_in_t in;
-    bulk_put_out_t out;
+    bulk_in_t in;
+    bulk_out_t out;
     hg_bulk_t bulk_handle;
 
     margo_instance_id mid = margo_hg_handle_get_instance(handle);
-    assert(mid);
 
     const struct hg_info* info = margo_get_info(handle);
     ndstore_provider_t provider = (ndstore_provider_t)margo_registered_data(mid, info->id);
@@ -140,7 +125,6 @@ static void ndstore_put_ult(hg_handle_t handle)
         return;
     }
 
-
     hret = margo_get_input(handle, &in);
     if(hret != HG_SUCCESS) {
         out.ret = NDSTORE_ERR_MERCURY;
@@ -149,26 +133,32 @@ static void ndstore_put_ult(hg_handle_t handle)
         return;
     }
 
-
+    obj_descriptor in_odsc;
+    memcpy(&in_odsc, in.odsc.raw_odsc, sizeof(in_odsc));
 
     struct obj_data *od;
-    od = obj_data_alloc(&(in.odsc));
-    hg_size_t size = in.size;
+    od = obj_data_alloc(&in_odsc);
+    if(!od)
+        fprintf(stderr, "Obj_data_alloc error\n");
+    hg_size_t size = (in_odsc.size)*bbox_volume(&(in_odsc.bb));
+
     void *buffer = (void*) od->data;
-    hret = margo_bulk_create(mid, 1, (void**)&buffer, &size,
+    hret = margo_bulk_create(mid, 1, (void**)&(od->data), &size,
                 HG_BULK_WRITE_ONLY, &bulk_handle);
 
     if(hret != HG_SUCCESS) {
+        fprintf(stderr, "Error in margo_bulk_create\n");
         out.ret = NDSTORE_ERR_MERCURY;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
 	}
-
+    
     hret = margo_bulk_transfer(mid, HG_BULK_PULL, info->addr, in.handle, 0,
             bulk_handle, 0, size);
     if(hret != HG_SUCCESS) {
+        fprintf(stderr, "Error in margo_bulk_transfer\n");
         out.ret = NDSTORE_ERR_MERCURY;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
@@ -181,9 +171,6 @@ static void ndstore_put_ult(hg_handle_t handle)
     ls_add_obj(provider->ls, od);
 
     margo_bulk_free(bulk_handle);
-
-
-
     margo_respond(handle, &out);
     margo_free_input(handle, &in);
     margo_destroy(handle);
@@ -194,12 +181,11 @@ DEFINE_MARGO_RPC_HANDLER(ndstore_put_ult)
 static void ndstore_get_ult(hg_handle_t handle)
 {
     hg_return_t hret;
-    bulk_get_in_t in;
-    bulk_get_out_t out;
+    bulk_in_t in;
+    bulk_out_t out;
     hg_bulk_t bulk_handle;
 
     margo_instance_id mid = margo_hg_handle_get_instance(handle);
-    assert(mid);
 
     const struct hg_info* info = margo_get_info(handle);
     ndstore_provider_t provider = (ndstore_provider_t)margo_registered_data(mid, info->id);
@@ -221,18 +207,20 @@ static void ndstore_get_ult(hg_handle_t handle)
         return;
     }
 
-
+    obj_descriptor in_odsc;
+    memcpy(&in_odsc, in.odsc.raw_odsc, sizeof(in_odsc));
+     
     struct obj_data *od, *from_obj;
     struct obj_data **od_tab;
     od_tab = malloc(sizeof(*od_tab) * provider->ls->num_obj);
 
     int obj_nums = 0;
-    obj_nums = ls_find_ods(provider->ls, &(in.odsc), od_tab);
+    obj_nums = ls_find_ods(provider->ls, &in_odsc, od_tab);
 
     if (obj_nums == 0) {
         char *str;
-        str = obj_desc_sprint(&(in.odsc));
-        fprintf(stderr, "Error (ndstore_put_ult): No objects for %s found in the provider\n", str);
+        str = obj_desc_sprint(&in_odsc);
+        fprintf(stderr, "Error (ndstore_put_ult): No objects found for %s", str);
         free(str);
         out.ret = NDSTORE_ERR_UNKNOWN_OBJ;
         margo_respond(handle, &out);
@@ -240,19 +228,20 @@ static void ndstore_get_ult(hg_handle_t handle)
         return;
     }
 
-    od = obj_data_alloc(&(in.odsc));
+    od = obj_data_alloc(&in_odsc);
     int i;
     for(i=0; i<obj_nums; i++){
         ssd_copy(od, od_tab[i]);
     }
     free(od_tab);
     
-    hg_size_t size = (in.odsc.size)*bbox_volume(&(in.odsc.bb));
+    hg_size_t size = (in_odsc.size)*bbox_volume(&(in_odsc.bb));
     void *buffer = (void*) od->data;
     hret = margo_bulk_create(mid, 1, (void**)&buffer, &size,
                 HG_BULK_READ_ONLY, &bulk_handle);
 
     if(hret != HG_SUCCESS) {
+        fprintf(stderr,"Error in margo_bulk_create()\n");
         out.ret = NDSTORE_ERR_MERCURY;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
@@ -263,6 +252,7 @@ static void ndstore_get_ult(hg_handle_t handle)
     hret = margo_bulk_transfer(mid, HG_BULK_PUSH, info->addr, in.handle, 0,
             bulk_handle, 0, size);
     if(hret != HG_SUCCESS) {
+        fprintf(stderr,"Error in margo_bulk_transfer()\n");
         out.ret = NDSTORE_ERR_MERCURY;
         margo_respond(handle, &out);
         margo_free_input(handle, &in);
@@ -270,13 +260,9 @@ static void ndstore_get_ult(hg_handle_t handle)
         margo_destroy(handle);
         return;
     }
-
     margo_bulk_free(bulk_handle);
-    out.size = size;
     out.ret = NDSTORE_SUCCESS;
     obj_data_free(od);
-
-
     margo_respond(handle, &out);
     margo_free_input(handle, &in);
     margo_destroy(handle);

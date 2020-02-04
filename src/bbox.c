@@ -31,11 +31,6 @@
 *  tjin@cac.rutgers.edu
 */
 
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
 #include "bbox.h"
 
 //static inline unsigned int 
@@ -62,6 +57,55 @@ static int bbox_intersect_ondim(const struct bbox *b0, const struct bbox *b1, in
              b0->lb.c[dim] <= b1->ub.c[dim]))
                 return 1;
         else    return 0;
+}
+
+size_t str_len(const char *str)
+{
+    if(str)
+        return strlen(str);
+    else
+        return 0;
+}
+
+char *str_append_const(char *str, const char *msg)
+{
+    int len, fix_str;
+
+    len = str_len(str) + str_len(msg) + 1;
+    fix_str = (str == 0);
+    str = realloc(str, len);
+    if(fix_str)
+        *str = '\0';
+    if(str)
+        strcat(str, msg);
+
+    return str;
+}
+
+char *str_append(char *str, char *msg)
+{
+    str = str_append_const(str, msg);
+
+    free(msg);
+    return str;
+}
+
+char *alloc_sprintf(const char *fmt_str, ...)
+{
+    va_list va_args_tmp, va_args;
+    int size;
+    char *str;
+  
+    va_start(va_args_tmp, fmt_str);
+    va_copy(va_args, va_args_tmp);
+    size = vsnprintf(NULL, 0, fmt_str, va_args_tmp);
+    va_end(va_args_tmp);
+    str = malloc(sizeof(*str) * (size + 1));
+    vsprintf(str, fmt_str, va_args); 
+    va_end(va_args);
+
+    return(str);
+
 }
 
 /*
@@ -131,13 +175,13 @@ void coord_print(struct coord *c, int num_dims)
 {
         switch (num_dims) {
         case 3:
-                printf("{%llu, %llu, %llu}", c->c[0], c->c[1], c->c[2]);
+                printf("{%" PRIu64 ", %" PRIu64  ", %" PRIu64 "}", c->c[0], c->c[1], c->c[2]);
                 break;
         case 2:
-                printf("{%llu, %llu}", c->c[0], c->c[1]);
+                printf("{%" PRIu64 ", %" PRIu64 "}", c->c[0], c->c[1]);
                 break;
         case 1:
-                printf("{%llu}", c->c[0]);
+                printf("{%" PRIu64 "}", c->c[0]);
         }
 }
 
@@ -145,18 +189,27 @@ void coord_print(struct coord *c, int num_dims)
   Routine to return a string representation of the 'coord' object.
 */
 
-char * coord_sprint(const struct coord *c, int num_dims)
+char *coord_sprint(const struct coord *c, int num_dims)
 {
-        char *str;
-        int i;
-        asprintf(&str, "{%d", c->c[0]);
-        for(i = 1; i < num_dims; i++){
-                char *tmp;
-                asprintf(&tmp, ", %llu", c->c[i]);
-                str = str_append(str, tmp);
+    char *str;
+    int i;
+    int size = 2; // count the curly braces
+
+    for(i = 0; i < num_dims; i++) {
+        size += snprintf(NULL, 0, "%" PRIu64, c->c[i]);
+        if(i > 0) {
         }
-        str = str_append_const(str, "}");
-        return str;
+        size += i ? 2 : 0; // account for ", " 
+    }
+    str = malloc(sizeof(*str) * (size + 1)); // add null terminator
+    strcpy(str, "{");
+    for(i = 0; i < num_dims; i++) {
+        char *tmp  = alloc_sprintf(i?", %" PRIu64 :"%" PRIu64, c->c[i]);
+        str = str_append(str, tmp);
+    }
+    str = str_append_const(str, "}");
+    
+    return str;    
 }
 
 
@@ -171,13 +224,12 @@ void bbox_print(struct bbox *bb)
 
 char * bbox_sprint(const struct bbox *bb)
 {
-        char *str;
+    char *str = strdup("{lb = ");
+    
+    str = str_append(str, coord_sprint(&bb->lb, bb->num_dims));
+    str = str_append_const(str, ", ub = ");
+    str = str_append(str, coord_sprint(&bb->ub, bb->num_dims));
+    str = str_append_const(str, "}\n");
 
-        asprintf(&str, "{lb = ");
-        str = str_append(str, coord_sprint(&bb->lb, bb->num_dims));
-        str = str_append_const(str, ", ub = ");
-        str = str_append(str, coord_sprint(&bb->ub, bb->num_dims));
-        str = str_append_const(str, "}\n");
-
-        return str;
+    return str;
 }

@@ -12,7 +12,7 @@ cmake_minimum_required (VERSION 3.0)
 project (ndstore C)
 #enable_testing ()
 
-#option(ENABLE_TESTS    "Build tests" OFF)
+option(ENABLE_TESTS    "Build tests" ON)
 #option(ENABLE_EXAMPLES "Build examples" OFF)
 
 # add our cmake module directory to the path
@@ -32,7 +32,7 @@ xpkg_import_module (margo REQUIRED margo)
 
 add_subdirectory (src)
 if(${ENABLE_TESTS})
-  add_subdirectory (test)
+  add_subdirectory (tests)
 endif(${ENABLE_TESTS})
 if(${ENABLE_EXAMPLES})
   add_subdirectory (examples)

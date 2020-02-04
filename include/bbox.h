@@ -7,10 +7,12 @@
 #ifndef __BBOX_H_
 #define __BBOX_H_
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdint.h>
-
-#include "util.h"
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
 
 #define max(a,b) (a) > (b) ? (a):(b)
 #define min(a,b) (a) < (b) ? (a):(b)
@@ -42,6 +44,10 @@ struct intv {
         uint64_t lb, ub;
 };
 
+char *str_append_const(char *, const char *);
+char *str_append(char *, char *);
+char *alloc_sprintf(const char *fmt_str, ...);
+
 uint64_t bbox_dist(struct bbox *, int);
 int bbox_include(const struct bbox *, const struct bbox *);
 int bbox_does_intersect(const struct bbox *, const struct bbox *);
@@ -53,8 +59,8 @@ int intv_do_intersect(struct intv *, struct intv *);
 uint64_t intv_size(struct intv *);
 
 
-extern char *str_append_const(char *, const char *);
-extern char *str_append(char *, char *);
+char *str_append_const(char *, const char *);
+char *str_append(char *, char *);
 
 void coord_print(struct coord *c, int num_dims);
 char * coord_sprint(const struct coord *c, int num_dims);
