@@ -112,6 +112,7 @@ int ndstore_provider_handle_release(ndstore_provider_handle_t handle);
  * array, the dimensions need to be reordered to construct the bounding box. For
  * example, the bounding box for C array c[2][4] is lb: {0,0}, ub: {3,1}. 
  * 
+ * @param[in] provier:  provider handle to connect to NDSTORE server.
  * @param[in] var_name:     Name of the variable.
  * @param[in] ver:      Version of the variable.
  * @param[in] size:     Size (in bytes) for each element of the global
@@ -148,7 +149,8 @@ int ndstore_put (ndstore_provider_handle_t provider,
  * Note: ordering of dimension (fast->slow) is 0, 1, ..., n-1. For C row-major
  * array, the dimensions need to be reordered to construct the bounding box. For
  * example, the bounding box for C array c[2][4] is lb: {0,0}, ub: {3,1}. 
- * 
+ *
+ * @param[in] provier:  provider handle to connect to NDSTORE server. 
  * @param[in] var_name:     Name of the variable.
  * @param[in] ver:      Version of the variable.
  * @param[in] size:     Size (in bytes) for each element of the global

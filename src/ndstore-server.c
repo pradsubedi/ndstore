@@ -224,16 +224,28 @@ static void ndstore_get_ult(hg_handle_t handle)
         free(str);
         out.ret = NDSTORE_ERR_UNKNOWN_OBJ;
         margo_respond(handle, &out);
+        margo_free_input(handle, &in);
         margo_destroy(handle);
         return;
     }
 
     od = obj_data_alloc(&in_odsc);
-    int i;
+    int i, total_elems_found;
+    total_elems_found = 0;
     for(i=0; i<obj_nums; i++){
-        ssd_copy(od, od_tab[i]);
+        total_elems_found += ssd_copy(od, od_tab[i]);
     }
     free(od_tab);
+
+    if(total_elems_found!=bbox_volume(&(in_odsc.bb))){
+        out.ret = NDSTORE_ERR_UNKNOWN_OBJ;
+        fprintf(stderr, "Error (ndstore_put_ult): Only partial objecyt is found. Returning Error to the client\n");
+        obj_data_free(od);
+        margo_respond(handle, &out);
+        margo_free_input(handle, &in);
+        margo_destroy(handle);
+        return;
+    }
     
     hg_size_t size = (in_odsc.size)*bbox_volume(&(in_odsc.bb));
     void *buffer = (void*) od->data;

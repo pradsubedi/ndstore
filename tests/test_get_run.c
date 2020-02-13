@@ -124,7 +124,7 @@ static int couple_read_nd(ndstore_provider_handle_t ndph, unsigned int ts, int n
 		err = ndstore_get(ndph, var_name, ts, elem_size, dims, lb, ub,
 			data_tab[i]);
 		if(err!=0){
-			fprintf(stderr, "ndstore_get() returned error %d", err);
+			fprintf(stderr, "ndstore_get() returned error %d\n", err);
 			return err;
 		}
 		

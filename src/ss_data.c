@@ -78,7 +78,7 @@ static void matrix_init(struct matrix *mat, enum storage_type st,
     mat->size_elem = se;
 }
 
-static void matrix_copy(struct matrix *a, struct matrix *b)
+static int matrix_copy(struct matrix *a, struct matrix *b)
 {
         char *A = a->pdata;
         char *B = b->pdata;
@@ -88,6 +88,7 @@ static void matrix_copy(struct matrix *a, struct matrix *b)
         uint64_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9;
         uint64_t bloc=0, bloc1=0, bloc2=0, bloc3=0, bloc4=0, bloc5=0, bloc6=0, bloc7=0, bloc8=0, bloc9=0;
     uint64_t numelem;
+    uint64_t num_copied_elem = 0;
 
     switch(a->num_dims){
         case(1):    
@@ -163,24 +164,25 @@ dim2:                for(a1 = a->mat_view.lb[1], b1 = b->mat_view.lb[1];
 dim1:               numelem = (a->mat_view.ub[0] - a->mat_view.lb[0]) + 1;
                     aloc = aloc1 + a->mat_view.lb[0];
                     bloc = bloc1 + b->mat_view.lb[0];
-                    memcpy(&A[aloc*a->size_elem], &B[bloc*a->size_elem], (a->size_elem * numelem));     
-            if(a->num_dims == 1)    return;
+                    memcpy(&A[aloc*a->size_elem], &B[bloc*a->size_elem], (a->size_elem * numelem));
+                    num_copied_elem += numelem;     
+            if(a->num_dims == 1)    return num_copied_elem;
                 }
-        if(a->num_dims == 2)    return;
+        if(a->num_dims == 2)    return num_copied_elem;
             }
-        if(a->num_dims == 3)    return; 
+        if(a->num_dims == 3)    return num_copied_elem; 
         }
-    if(a->num_dims == 4)    return;
+    if(a->num_dims == 4)    return num_copied_elem;
     }
-    if(a->num_dims == 5)    return;
+    if(a->num_dims == 5)    return num_copied_elem;
     }
-    if(a->num_dims == 6)    return;
+    if(a->num_dims == 6)    return num_copied_elem;
     }
-    if(a->num_dims == 7)    return;
+    if(a->num_dims == 7)    return num_copied_elem;
     }
-    if(a->num_dims == 8)    return;
+    if(a->num_dims == 8)    return num_copied_elem;
     }
-    if(a->num_dims == 9)    return;
+    if(a->num_dims == 9)    return num_copied_elem;
     }
 }
 
@@ -204,6 +206,7 @@ int ssd_copy(struct obj_data *to_obj, struct obj_data *from_obj)
 {
         struct matrix to_mat, from_mat;
         struct bbox bbcom;
+        int copied_elems = 0;
 
         bbox_intersect(&to_obj->obj_desc.bb, &from_obj->obj_desc.bb, &bbcom);
 
@@ -215,8 +218,8 @@ int ssd_copy(struct obj_data *to_obj, struct obj_data *from_obj)
                     &to_obj->obj_desc.bb, &bbcom,
                     to_obj->data, to_obj->obj_desc.size);
 
-        matrix_copy(&to_mat, &from_mat);
-        return 0;
+        copied_elems = matrix_copy(&to_mat, &from_mat);
+        return copied_elems;
 }
 
 
