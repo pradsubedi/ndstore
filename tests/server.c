@@ -43,7 +43,7 @@ int main(int argc, char** argv)
         goto error;
     }
     margo_addr_free(mid, my_addr);
-    fprintf(stdout,"%s\n", my_addr_str);
+    fprintf(stderr,"%s", my_addr_str);
 
     // create the NDSTORE provider
     ret = ndstore_provider_register(mid, 1, NDSTORE_ABT_POOL_DEFAULT, &ndstore_prov);
