@@ -1,4 +1,8 @@
-
+/*
+ * Copyright (c) 2020, Rutgers Discovery Informatics Institute, Rutgers University
+ *
+ * See COPYRIGHT in top-level directory.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>

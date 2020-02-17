@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2020, Rutgers Discovery Informatics Institute, Rutgers University
+ *
+ * See COPYRIGHT in top-level directory.
+ */
+
 #include "ss_data.h"
 #include "ndstore-client.h"
 

@@ -58,8 +58,8 @@ install (FILES "${CMAKE_CURRENT_BINARY_DIR}/ndstore-config.cmake"
                "${CMAKE_CURRENT_BINARY_DIR}/ndstore-config-version.cmake"
                "../cmake/xpkg-import.cmake"
          DESTINATION ${ndstore-pkg} )
-install (DIRECTORY ../include/ndstore
-         DESTINATION include
-         FILES_MATCHING PATTERN "*.h")
+install (DIRECTORY ../include
+         DESTINATION ${DEST_DIR}
+         FILES_MATCHING PATTERN "*ndstore-*.h")
 install (FILES "${CMAKE_CURRENT_BINARY_DIR}/ndstore.pc"
 		DESTINATION "lib/pkgconfig/")
